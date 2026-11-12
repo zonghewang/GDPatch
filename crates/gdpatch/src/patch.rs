@@ -448,7 +448,7 @@ impl<'a> Patcher<'a> {
                 None => continue,
             };
 
-            let package_patch_mod_name = mod_pack.info
+            let package_patch_mod_name = &r#mod.info
                                                  .config
                                                  .patch
                                                  .package
@@ -457,7 +457,7 @@ impl<'a> Patcher<'a> {
             match package_patch_mod_name {
                 Some(package_patch_mod_name) => {
                     if !path.ends_with(package_patch_mod_name) {
-                        return Ok(self.old_pack);
+                        return self.old_pack;
                     }
                 }
                 None => {
