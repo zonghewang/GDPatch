@@ -448,11 +448,11 @@ impl<'a> Patcher<'a> {
                 None => continue,
             };
 
-            let package_patch_mod_name = mod_pack.info.config.patch.package;
-                                                .config
-                                                .patch
-                                                .package
-                                                .default();
+            let package_patch_mod_name = mod_pack.info
+                                                 .config
+                                                 .patch
+                                                 .package
+                                                 .default();
             
             match package_patch_mod_name {
                 Some(package_patch_mod_name) => {
