@@ -113,7 +113,7 @@ impl<'a> Patcher<'a> {
         )
     }
 
-    fn parse_project_settings(&mut self) -> ProjectSettings {
+    fn parse_project_settings(&mut self) -> Option<ProjectSettings> {
         // TODO: support using a pre-existing project settings for games with multiple pack files
         let path = self.ensure_path_prefix(ProjectSettings::PROJECT_SETTINGS_PATH);
         let project_settings =  {
@@ -343,7 +343,7 @@ impl<'a> Patcher<'a> {
     pub fn run(mut self) -> color_eyre::Result<VirtualPackBuilder> {
         let project_settings = self.parse_project_settings();
 
-        Some(project_settings){
+        if let Some(project_settings) = project_settings {
             let gdscript_build = match self.engine_build.gdscript {
                 GDScriptBuild::V2(ref v2) => v2.clone(),
                 _ => unimplemented!("GDScript V1"),
