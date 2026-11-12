@@ -447,11 +447,6 @@ impl<'a> Patcher<'a> {
                 let exists_in_old = self.old_pack.files.contains_key(&path);
                 let is_script = path.ends_with(".gd") || path.ends_with(".gdc");
 
-                // Disallow replacing scripts directly.
-                if exists_in_old && is_script {
-                    warn!("cannot replace game script in mod pack");
-                    continue;
-                }
 
                 // Always skip project settings that were accidentally included by the editor.
                 if normalized_path == ProjectSettings::PROJECT_SETTINGS_PATH {
