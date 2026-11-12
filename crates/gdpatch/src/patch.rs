@@ -117,15 +117,17 @@ impl<'a> Patcher<'a> {
         // TODO: support using a pre-existing project settings for games with multiple pack files
         let path = self.ensure_path_prefix(ProjectSettings::PROJECT_SETTINGS_PATH);
         let project_settings =  {
-            let file = self
-                .old_pack
-                .files
-                .get(&path);
             match fs::metadata(&path) {
                 Ok(_)  => {
+                        let file = self
+                            .old_pack
+                            .files
+                            .get(&path)
+                            .expect("project settings file is missing");
                         let contents = self
                             .old_pack
-                            .file_data(&self.mapping, file);
+                            .file_data(&self.mapping, file)
+                            .expect("failed to read project settings");
                         let slice = contents.as_ref();
 
                         let mut buf = ReadableMarshalBuffer::new(slice, true);
