@@ -161,7 +161,7 @@ impl<'a> Patcher<'a> {
             })
             .unwrap_or(true);
 
-        project_settings
+        Some(project_settings)
     }
 
     /// Check if this path needs to be specially merged together.
@@ -492,10 +492,103 @@ impl<'a> Patcher<'a> {
 
             Ok(self.new_pack)
         }else{
-            return self.old_pack;
+            let gdscript_build = match self.engine_build.gdscript {
+                GDScriptBuild::V2(ref v2) => v2.clone(),
+                _ => unimplemented!("GDScript V1"),
+            };
+
+            // Rebuild files in the virtual pack.
+            let mapping = self.mapping.clone();
+
+            for (path, file) in &self.old_pack.files {
+                let normalized_path = self.strip_path_prefix(path);
+                let _entered = info_span!("pack_entry", path = %normalized_path).entered();
+
+                let contents = FileContents::Disk {
+                    mapping: self.mapping.clone(),
+                    offset: file.offset,
+                    len: file.stored_size(),
+                };
+
+                let is_script = path.ends_with(".gd") || path.ends_with(".gdc");
+                let should_patch_script = self.callbacks.has_patcher_for_script(&normalized_path)
+                    || self.config.debug.patch_all_scripts;
+                let should_patch_file = self.callbacks.has_patcher_for_file(&normalized_path);
+                if file.encrypted
+                    && !(is_script && should_patch_script)
+                    && !(!is_script && should_patch_file)
+                    && ![
+                        UIDCache::UID_CACHE_FILENAME,
+                        ClassCache::CLASS_CACHE_FILENAME,
+                        ExtensionList::EXTENSION_LIST_FILENAME,
+                    ]
+                    .iter()
+                    .any(|name| normalized_path == self.data_dir_path(name))
+                {
+                    self.new_pack
+                        .add_packed_file(path.clone(), file.clone(), contents);
+                    continue;
+                }
+
+                let data = self.old_pack.file_data(&mapping, file)?;
+                let slice = data.as_ref();
+
+                match self.merge_special_file(&normalized_path, slice) {
+                    Ok(patched) => {
+                        if patched {
+                            continue;
+                        }
+                    }
+
+                    Err(err) => error!(err = %err, "failed to merge file"),
+                };
+
+                // Patch scripts.
+                if is_script && should_patch_script {
+                    match self.patch_script(&normalized_path, slice, &gdscript_build) {
+                        Ok(patched_data) => {
+                            self.new_pack.add_file(
+                                path.clone(),
+                                patched_data.len() as u64,
+                                file.hash,
+                                FileContents::Memory(patched_data),
+                            );
+
+                            continue;
+                        }
+
+                        Err(err) => {
+                            error!(err = %err, "failed to patch script");
+                        }
+                    }
+                }
+
+                if !is_script && should_patch_file {
+                    match self.callbacks.patch_file(&normalized_path, slice) {
+                        Ok(patched_data) => {
+                            self.new_pack.add_file(
+                                path.clone(),
+                                patched_data.len() as u64,
+                                file.hash,
+                                FileContents::Memory(patched_data),
+                            );
+
+                            continue;
+                        }
+
+                        Err(err) => {
+                            error!(err = %err, "failed to patch file");
+                        }
+                    }
+                }
+
+                // Preserve the original file.
+                trace!("adding game file");
+                self.new_pack
+                    .add_packed_file(path.clone(), file.clone(), contents);
+            }
+            Ok(self.new_pack)
         }
-
-
 
     }
 }
