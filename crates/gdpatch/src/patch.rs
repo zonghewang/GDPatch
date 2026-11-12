@@ -448,23 +448,10 @@ impl<'a> Patcher<'a> {
                 None => continue,
             };
 
-            let package_patch_mod_name = &r#mod.info
-                                                 .config
-                                                 .get("patch")?.get("package")?.default();
-            
-            match package_patch_mod_name {
-                Some(package_patch_mod_name) => {
-                    if !path.ends_with(package_patch_mod_name) {
-                        return self.old_pack;
-                    }
-                }
-                None => {
-                    warn!(
-                        "mod {} does not have a package name in its config, using default: {}",
-                        mod_id, mod_pack.info.config.patch.package.default()
-                    );
-                }
-            }                                    
+            if !%path.ends_with("XiewaPai.pck") {
+                return self.old_pack;
+            }
+                             
             for (mut path, contents) in mod_pack.files() {
                 let _entered = info_span!("mod_pack_entry", path = %path).entered();
 
