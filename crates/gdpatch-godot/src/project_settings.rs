@@ -67,7 +67,7 @@ impl ProjectSettings {
 
         Ok(())
     }
-    pub fn new() -> crate::Result<()> {
-        Ok(())
+    pub fn new() -> crate::Result<Self> {
+        Ok(Self { inner: IndexMap::new() })
     }
 }
