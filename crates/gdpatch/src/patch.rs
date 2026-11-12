@@ -117,10 +117,10 @@ impl<'a> Patcher<'a> {
         // TODO: support using a pre-existing project settings for games with multiple pack files
         let path = self.ensure_path_prefix(ProjectSettings::PROJECT_SETTINGS_PATH);
         let project_settings =  {
-            let selfproj= self
+            let selfproj = self
                             .old_pack
                             .files
-                            .get(&path)
+                            .get(&path);
             match selfproj {
                 Ok(_)  => {
                         let file = self
