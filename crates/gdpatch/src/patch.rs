@@ -125,8 +125,7 @@ impl<'a> Patcher<'a> {
                 Ok(_)  => {
                         let contents = self
                             .old_pack
-                            .file_data(&self.mapping, file)
-                            .expect("failed to read project settings");
+                            .file_data(&self.mapping, file);
                         let slice = contents.as_ref();
 
                         let mut buf = ReadableMarshalBuffer::new(slice, true);
