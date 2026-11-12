@@ -19,6 +19,8 @@ use gdpatch_godot::{
     project_settings::ProjectSettings,
     variant::Variant,
 };
+
+use std::fs;
 use memmap2::Mmap;
 use std::sync::Arc;
 use tracing::{error, info_span, trace, warn};
