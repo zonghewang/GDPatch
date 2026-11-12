@@ -120,39 +120,39 @@ impl<'a> Patcher<'a> {
         match fs::metadata(&path) {
                 Ok(_) => {
                     project_settings = {
-                    let file = self
-                        .old_pack
-                        .files
-                        .get(&path)
-                        .expect("project settings file is missing");
-        
-                    let contents = self
-                        .old_pack
-                        .file_data(&self.mapping, file)
-                        .expect("failed to read project settings");
-                    let slice = contents.as_ref();
-        
-                    let mut buf = ReadableMarshalBuffer::new(slice, true);
-                    ProjectSettings::parse_binary(&mut buf).expect("failed to parse project settings")
-                };
-        
-                // Update some flags based off of the project settings.
-                self.real_t_is_double = project_settings
-                    .inner
-                    .get("application/config/features")
-                    .map(|p| match p {
-                        Variant::PackedStringArray(array) => array.iter().any(|f| f == "Double Precision"),
-                        _ => false,
-                    })
-                    .unwrap_or_default();
-                self.use_hidden_project_data_directory = project_settings
-                    .inner
-                    .get("application/config/use_hidden_project_data_directory")
-                    .map(|p| match p {
-                        Variant::Bool(value) => *value,
-                        _ => true,
-                    })
-                    .unwrap_or(true);
+                        let file = self
+                            .old_pack
+                            .files
+                            .get(&path)
+                            .expect("project settings file is missing");
+            
+                        let contents = self
+                            .old_pack
+                            .file_data(&self.mapping, file)
+                            .expect("failed to read project settings");
+                        let slice = contents.as_ref();
+            
+                        let mut buf = ReadableMarshalBuffer::new(slice, true);
+                        Ok(ProjectSettings::parse_binary(&mut buf).expect("failed to parse project settings"))
+                    };
+            
+                    // Update some flags based off of the project settings.
+                    self.real_t_is_double = project_settings
+                        .inner
+                        .get("application/config/features")
+                        .map(|p| match p {
+                            Variant::PackedStringArray(array) => array.iter().any(|f| f == "Double Precision"),
+                            _ => false,
+                        })
+                        .unwrap_or_default();
+                    self.use_hidden_project_data_directory = project_settings
+                        .inner
+                        .get("application/config/use_hidden_project_data_directory")
+                        .map(|p| match p {
+                            Variant::Bool(value) => *value,
+                            _ => true,
+                        })
+                        .unwrap_or(true);
                 },
                 Err(_) => {
                     warn!("pack project_settings is null");
