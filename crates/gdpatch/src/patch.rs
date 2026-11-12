@@ -450,9 +450,7 @@ impl<'a> Patcher<'a> {
 
             let package_patch_mod_name = &r#mod.info
                                                  .config
-                                                 .patch
-                                                 .package
-                                                 .default();
+                                                 .get("patch")?.get("package")?.default();
             
             match package_patch_mod_name {
                 Some(package_patch_mod_name) => {
