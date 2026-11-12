@@ -114,7 +114,7 @@ impl<'a> Patcher<'a> {
     fn parse_project_settings(&mut self) -> ProjectSettings {
         // TODO: support using a pre-existing project settings for games with multiple pack files
         let path = self.ensure_path_prefix(ProjectSettings::PROJECT_SETTINGS_PATH);
-        let project_settings = {};
+        let project_settings = ProjectSettings::new();
         match fs::metadata(&path) {
                 Ok(_) => {
                     project_settings = {
