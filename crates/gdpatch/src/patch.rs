@@ -122,7 +122,11 @@ impl<'a> Patcher<'a> {
                             .files
                             .get(&path);
             match selfproj {
-                Ok(_)  => {
+                None => {
+                        warn!("pack project_settings is null");
+                        ProjectSettings::new().expect("failed to create empty new project settings")
+                    },
+                    Some(_) => {
                         let file = self
                             .old_pack
                             .files
@@ -136,11 +140,7 @@ impl<'a> Patcher<'a> {
 
                         let mut buf = ReadableMarshalBuffer::new(slice, true);
                         ProjectSettings::parse_binary(&mut buf).expect("failed to parse project settings")
-                    } ,
-                Err(_) => {
-                        warn!("pack project_settings is null");
-                        ProjectSettings::new().expect("failed to create empty new project settings")
-                    },
+                    }
                 }
         };
 
