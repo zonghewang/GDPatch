@@ -124,7 +124,7 @@ impl<'a> Patcher<'a> {
             match selfproj {
                 None => {
                     warn!("pack project_settings is null");
-                    ProjectSettings::new().expect("failed to create empty new project settings")
+                    return None;
                 },
                 Some(_) => {
                     let file = self
@@ -343,133 +343,49 @@ impl<'a> Patcher<'a> {
     pub fn run(mut self) -> color_eyre::Result<VirtualPackBuilder> {
         let project_settings = self.parse_project_settings();
 
-        let gdscript_build = match self.engine_build.gdscript {
-            GDScriptBuild::V2(ref v2) => v2.clone(),
-            _ => unimplemented!("GDScript V1"),
-        };
-
-        // Rebuild files in the virtual pack.
-        let mapping = self.mapping.clone();
-        for (path, file) in &self.old_pack.files {
-            let normalized_path = self.strip_path_prefix(path);
-            let _entered = info_span!("pack_entry", path = %normalized_path).entered();
-
-            let contents = FileContents::Disk {
-                mapping: self.mapping.clone(),
-                offset: file.offset,
-                len: file.stored_size(),
+        Some(project_settings){
+            let gdscript_build = match self.engine_build.gdscript {
+                GDScriptBuild::V2(ref v2) => v2.clone(),
+                _ => unimplemented!("GDScript V1"),
             };
 
-            let is_script = path.ends_with(".gd") || path.ends_with(".gdc");
-            let should_patch_script = self.callbacks.has_patcher_for_script(&normalized_path)
-                || self.config.debug.patch_all_scripts;
-            let should_patch_file = self.callbacks.has_patcher_for_file(&normalized_path);
-            if file.encrypted
-                && !(is_script && should_patch_script)
-                && !(!is_script && should_patch_file)
-                && ![
-                    UIDCache::UID_CACHE_FILENAME,
-                    ClassCache::CLASS_CACHE_FILENAME,
-                    ExtensionList::EXTENSION_LIST_FILENAME,
-                ]
-                .iter()
-                .any(|name| normalized_path == self.data_dir_path(name))
-            {
-                self.new_pack
-                    .add_packed_file(path.clone(), file.clone(), contents);
-                continue;
-            }
+            // Rebuild files in the virtual pack.
+            let mapping = self.mapping.clone();
 
-            let data = self.old_pack.file_data(&mapping, file)?;
-            let slice = data.as_ref();
+            for (path, file) in &self.old_pack.files {
+                let normalized_path = self.strip_path_prefix(path);
+                let _entered = info_span!("pack_entry", path = %normalized_path).entered();
 
-            match self.merge_special_file(&normalized_path, slice) {
-                Ok(patched) => {
-                    if patched {
-                        continue;
-                    }
-                }
+                let contents = FileContents::Disk {
+                    mapping: self.mapping.clone(),
+                    offset: file.offset,
+                    len: file.stored_size(),
+                };
 
-                Err(err) => error!(err = %err, "failed to merge file"),
-            };
-
-            // Patch scripts.
-            if is_script && should_patch_script {
-                match self.patch_script(&normalized_path, slice, &gdscript_build) {
-                    Ok(patched_data) => {
-                        self.new_pack.add_file(
-                            path.clone(),
-                            patched_data.len() as u64,
-                            file.hash,
-                            FileContents::Memory(patched_data),
-                        );
-
-                        continue;
-                    }
-
-                    Err(err) => {
-                        error!(err = %err, "failed to patch script");
-                    }
-                }
-            }
-
-            if !is_script && should_patch_file {
-                match self.callbacks.patch_file(&normalized_path, slice) {
-                    Ok(patched_data) => {
-                        self.new_pack.add_file(
-                            path.clone(),
-                            patched_data.len() as u64,
-                            file.hash,
-                            FileContents::Memory(patched_data),
-                        );
-
-                        continue;
-                    }
-
-                    Err(err) => {
-                        error!(err = %err, "failed to patch file");
-                    }
-                }
-            }
-
-            // Preserve the original file.
-            trace!("adding game file");
-            self.new_pack
-                .add_packed_file(path.clone(), file.clone(), contents);
-        }
-
-        // Insert modded pack files.
-        // TODO: mod order, maybe?
-        for (mod_id, r#mod) in &self.mods.0 {
-            let _entered = info_span!("mod_pack", %mod_id).entered();
-
-            let mod_pack = match &r#mod.pack {
-                Some(mod_pack) => mod_pack,
-                None => continue,
-            };
-
-            if !%path.ends_with("XiewaPai.pck") {
-                return self.old_pack;
-            }
-                             
-            for (mut path, contents) in mod_pack.files() {
-                let _entered = info_span!("mod_pack_entry", path = %path).entered();
-
-                // Add/remove res:// prefix if required.
-                path = self.ensure_path_prefix(&path);
-                let normalized_path = self.strip_path_prefix(&path);
-
-                let exists_in_old = self.old_pack.files.contains_key(&path);
                 let is_script = path.ends_with(".gd") || path.ends_with(".gdc");
-
-
-                // Always skip project settings that were accidentally included by the editor.
-                if normalized_path == ProjectSettings::PROJECT_SETTINGS_PATH {
-                    warn!("skipping project settings file in mod pack");
+                let should_patch_script = self.callbacks.has_patcher_for_script(&normalized_path)
+                    || self.config.debug.patch_all_scripts;
+                let should_patch_file = self.callbacks.has_patcher_for_file(&normalized_path);
+                if file.encrypted
+                    && !(is_script && should_patch_script)
+                    && !(!is_script && should_patch_file)
+                    && ![
+                        UIDCache::UID_CACHE_FILENAME,
+                        ClassCache::CLASS_CACHE_FILENAME,
+                        ExtensionList::EXTENSION_LIST_FILENAME,
+                    ]
+                    .iter()
+                    .any(|name| normalized_path == self.data_dir_path(name))
+                {
+                    self.new_pack
+                        .add_packed_file(path.clone(), file.clone(), contents);
                     continue;
                 }
 
-                match self.merge_special_file(&normalized_path, contents.as_slice()) {
+                let data = self.old_pack.file_data(&mapping, file)?;
+                let slice = data.as_ref();
+
+                match self.merge_special_file(&normalized_path, slice) {
                     Ok(patched) => {
                         if patched {
                             continue;
@@ -479,19 +395,107 @@ impl<'a> Patcher<'a> {
                     Err(err) => error!(err = %err, "failed to merge file"),
                 };
 
+                // Patch scripts.
+                if is_script && should_patch_script {
+                    match self.patch_script(&normalized_path, slice, &gdscript_build) {
+                        Ok(patched_data) => {
+                            self.new_pack.add_file(
+                                path.clone(),
+                                patched_data.len() as u64,
+                                file.hash,
+                                FileContents::Memory(patched_data),
+                            );
+
+                            continue;
+                        }
+
+                        Err(err) => {
+                            error!(err = %err, "failed to patch script");
+                        }
+                    }
+                }
+
+                if !is_script && should_patch_file {
+                    match self.callbacks.patch_file(&normalized_path, slice) {
+                        Ok(patched_data) => {
+                            self.new_pack.add_file(
+                                path.clone(),
+                                patched_data.len() as u64,
+                                file.hash,
+                                FileContents::Memory(patched_data),
+                            );
+
+                            continue;
+                        }
+
+                        Err(err) => {
+                            error!(err = %err, "failed to patch file");
+                        }
+                    }
+                }
+
                 // Preserve the original file.
-                trace!("adding modded file");
-                self.new_pack.add_file(
-                    path.clone(),
-                    contents.len(),
-                    [0u8; 16], // TODO
-                    contents,
-                );
+                trace!("adding game file");
+                self.new_pack
+                    .add_packed_file(path.clone(), file.clone(), contents);
             }
+
+            // Insert modded pack files.
+            // TODO: mod order, maybe?
+            for (mod_id, r#mod) in &self.mods.0 {
+                let _entered = info_span!("mod_pack", %mod_id).entered();
+
+                let mod_pack = match &r#mod.pack {
+                    Some(mod_pack) => mod_pack,
+                    None => continue,
+                };
+                                
+                for (mut path, contents) in mod_pack.files() {
+                    let _entered = info_span!("mod_pack_entry", path = %path).entered();
+
+                    // Add/remove res:// prefix if required.
+                    path = self.ensure_path_prefix(&path);
+                    let normalized_path = self.strip_path_prefix(&path);
+
+                    let exists_in_old = self.old_pack.files.contains_key(&path);
+                    let is_script = path.ends_with(".gd") || path.ends_with(".gdc");
+
+
+                    // Always skip project settings that were accidentally included by the editor.
+                    if normalized_path == ProjectSettings::PROJECT_SETTINGS_PATH {
+                        warn!("skipping project settings file in mod pack");
+                        continue;
+                    }
+
+                    match self.merge_special_file(&normalized_path, contents.as_slice()) {
+                        Ok(patched) => {
+                            if patched {
+                                continue;
+                            }
+                        }
+
+                        Err(err) => error!(err = %err, "failed to merge file"),
+                    };
+
+                    // Preserve the original file.
+                    trace!("adding modded file");
+                    self.new_pack.add_file(
+                        path.clone(),
+                        contents.len(),
+                        [0u8; 16], // TODO
+                        contents,
+                    );
+                }
+            }
+
+            self.apply_merged_files(project_settings);
+
+            Ok(self.new_pack)
+        }else{
+            return self.old_pack;
         }
 
-        self.apply_merged_files(project_settings);
 
-        Ok(self.new_pack)
+
     }
 }
