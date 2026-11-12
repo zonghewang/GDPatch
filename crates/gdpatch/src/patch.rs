@@ -157,7 +157,7 @@ impl<'a> Patcher<'a> {
                 },
             }
 
-        project_settings
+        return project_settings
     }
 
     /// Check if this path needs to be specially merged together.
