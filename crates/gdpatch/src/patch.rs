@@ -120,7 +120,7 @@ impl<'a> Patcher<'a> {
             let file = self
                 .old_pack
                 .files
-                .get(&path)
+                .get(&path);
 
             Ok(file) = f {
                 let contents = self
