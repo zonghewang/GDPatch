@@ -67,4 +67,7 @@ impl ProjectSettings {
 
         Ok(())
     }
+    pub fn new(&self) -> crate::Result<()> {
+        Ok(())
+    }
 }
