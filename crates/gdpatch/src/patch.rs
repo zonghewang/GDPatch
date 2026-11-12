@@ -121,22 +121,22 @@ impl<'a> Patcher<'a> {
                 .old_pack
                 .files
                 .get(&path);
-        match file {
-            Ok(file)  => {
-                    let contents = self
-                        .old_pack
-                        .file_data(&self.mapping, file)
-                        .expect("failed to read project settings");
-                    let slice = contents.as_ref();
+            match file {
+                Ok(file)  => {
+                        let contents = self
+                            .old_pack
+                            .file_data(&self.mapping, file)
+                            .expect("failed to read project settings");
+                        let slice = contents.as_ref();
 
-                    let mut buf = ReadableMarshalBuffer::new(slice, true);
-                    ProjectSettings::parse_binary(&mut buf).expect("failed to parse project settings")
-                } ,
-            Err(error) => {
-                    warn!("pack project_settings is null");
-                    ProjectSettings::new().expect("failed to create empty new project settings")
-                },
-            }
+                        let mut buf = ReadableMarshalBuffer::new(slice, true);
+                        ProjectSettings::parse_binary(&mut buf).expect("failed to parse project settings")
+                    } ,
+                Err(error) => {
+                        warn!("pack project_settings is null");
+                        ProjectSettings::new().expect("failed to create empty new project settings")
+                    },
+                }
         };
 
         // Update some flags based off of the project settings.
