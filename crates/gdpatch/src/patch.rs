@@ -123,25 +123,24 @@ impl<'a> Patcher<'a> {
                             .get(&path);
             match selfproj {
                 None => {
-                        warn!("pack project_settings is null");
-                        ProjectSettings::new().expect("failed to create empty new project settings")
-                    },
-                    Some(_) => {
-                        let file = self
-                            .old_pack
-                            .files
-                            .get(&path)
-                            .expect("project settings file is missing");
-                        let contents = self
-                            .old_pack
-                            .file_data(&self.mapping, file)
-                            .expect("failed to read project settings");
-                        let slice = contents.as_ref();
-
-                        let mut buf = ReadableMarshalBuffer::new(slice, true);
-                        ProjectSettings::parse_binary(&mut buf).expect("failed to parse project settings")
-                    }
+                    warn!("pack project_settings is null");
+                    ProjectSettings::new().expect("failed to create empty new project settings")
+                },
+                Some(_) => {
+                    let file = self
+                        .old_pack
+                        .files
+                        .get(&path)
+                        .expect("project settings file is missing");
+                    let contents = self
+                        .old_pack
+                        .file_data(&self.mapping, file)
+                        .expect("failed to read project settings");
+                    let slice = contents.as_ref();
+                    let mut buf = ReadableMarshalBuffer::new(slice, true);
+                    ProjectSettings::parse_binary(&mut buf).expect("failed to parse project settings")
                 }
+            }
         };
 
         // Update some flags based off of the project settings.
@@ -449,6 +448,25 @@ impl<'a> Patcher<'a> {
                 None => continue,
             };
 
+            let package_patch_mod_name = mod_pack.info.config.patch.package;
+                                                .config
+                                                .patch
+                                                .package
+                                                .default();
+            
+            match package_patch_mod_name {
+                Some(package_patch_mod_name) => {
+                    if !path.ends_with(package_patch_mod_name) {
+                        return Ok(self.old_pack);
+                    }
+                }
+                None => {
+                    warn!(
+                        "mod {} does not have a package name in its config, using default: {}",
+                        mod_id, mod_pack.info.config.patch.package.default()
+                    );
+                }
+            }                                    
             for (mut path, contents) in mod_pack.files() {
                 let _entered = info_span!("mod_pack_entry", path = %path).entered();
 
